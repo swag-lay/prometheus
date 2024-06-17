@@ -217,6 +217,7 @@ func (m *Manager) Stop() {
 	close(m.graceShut)
 }
 
+// syncCh(0)
 func (m *Manager) updateTsets(tsets map[string][]*targetgroup.Group) {
 	m.mtxScrape.Lock()
 	m.targetSets = tsets

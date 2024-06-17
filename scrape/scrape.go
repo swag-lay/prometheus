@@ -61,6 +61,7 @@ var AlignScrapeTimestamps = true
 var errNameLabelMandatory = fmt.Errorf("missing metric name (%s label)", labels.MetricName)
 
 // scrapePool manages scrapes for sets of targets.
+// 单个job的抓取目标的工作单位
 type scrapePool struct {
 	appendable storage.Appendable
 	logger     log.Logger
@@ -388,6 +389,7 @@ func (sp *scrapePool) Sync(tgs []*targetgroup.Group) {
 	sp.droppedTargets = []*Target{}
 	sp.droppedTargetsCount = 0
 	for _, tg := range tgs {
+		// 基于targetgroup.Group创建targets
 		targets, failures := TargetsFromGroup(tg, sp.config, sp.noDefaultPort, targets, lb)
 		for _, err := range failures {
 			level.Error(sp.logger).Log("msg", "Creating target failed", "err", err)
@@ -450,6 +452,9 @@ func (sp *scrapePool) sync(targets []*Target) {
 			// The scrape interval and timeout labels are set to the config's values initially,
 			// so whether changed via relabeling or not, they'll exist and hold the correct values
 			// for every target.
+			// 生成targetScraper，其中封装了Target和client
+			// Target中有ip，端口，请求等参数，需要通过这些参数后见http发送request请求
+			// client是封装了认证信息的http请求客户端工具，用于将http请求request发送出去
 			var err error
 			interval, timeout, err = t.intervalAndTimeout(interval, timeout)
 			s := &targetScraper{
@@ -487,6 +492,8 @@ func (sp *scrapePool) sync(targets []*Target) {
 			uniqueLoops[hash] = l
 		} else {
 			// This might be a duplicated target.
+			// 1. 重复的采集点，直接忽略即可
+			// 2. 之前发现并启动的采集点：设置uniqueLoops[hash] = nil，表示不需要重复启动
 			if _, ok := uniqueLoops[hash]; !ok {
 				uniqueLoops[hash] = nil
 			}
